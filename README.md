@@ -10,13 +10,13 @@ Requirements:
 - other standard libraries
 - a webcam
 
-AdminGUI.py:
+AdminGUI.pyw:
 1) Insert a username and relative password
 2) Start face recognition training taking 3 photos
 3) You can test your face matching clicking "Test face matching"
 4) Save current user into database
 
-UserGUI.py:
+UserGUI.pyw:
 1) Insert username and password previously created with AdminGUI.py
 2) Click on "FACE LOGIN"
 3) Enjoy
