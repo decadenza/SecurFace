@@ -1,5 +1,5 @@
 # SecurFace
-A demonstrative face recognition application
+This is a **demonstrative-only** application using face recognition for security purpose.
 
 Requirements:
 - Python 3+ (tested on 3.4 and 3.6 only)
@@ -21,6 +21,8 @@ UserGUI.py:
 2) Click on "FACE LOGIN"
 3) Enjoy
 
+
+N.B. The "server" folder emulates a remote server that contains user data.
 
 
 Copyright 2017 Pasquale Lafiosca
