@@ -23,7 +23,7 @@ Copyright 2017 Pasquale Lafiosca
 import os,sys,time,threading,json,string,random
 from tkinter import Tk,Frame,Label,Entry,Message,Button,messagebox,Text,Menu,Scrollbar,filedialog,IntVar,font,PhotoImage,StringVar,Listbox
 from tkinter import constants as c
-import sqlite3 as sql #database
+
 import face_recognition #main library
 import cv2 #opencv2
 import pickle
@@ -32,34 +32,12 @@ import pdb #debug library
 #custom libraries
 from lib.cryptoAES import cryptoAES
 from lib.pwdManager import pwdManager
+from database import Database
 
 #CONFIG
 CURPATH = os.path.dirname(os.path.realpath(__file__)) #current path
 DBPATH = os.path.join(CURPATH,"server","db","user.db")
 FACEPATH = os.path.join(CURPATH,"server","faces")
-
-class Database:
-    def __init__(self,p):
-        if not os.path.exists(os.path.dirname(p)): #if folder does not exists
-            os.makedirs(os.path.dirname(p)) #create it
-        self.conn = sql.connect(p) #open connection (creates file if does not exist)
-        self.cursor = self.conn.cursor()
-        self.cursor.execute("CREATE TABLE IF NOT EXISTS 'users' ( \
-            'id'    INTEGER PRIMARY KEY AUTOINCREMENT, \
-            'name'  TEXT UNIQUE, \
-            'pwd'   TEXT \
-            );")
-        
-    def query(self,q,args=None):
-        if args:
-            self.cursor.execute(q,args) #execute query and return result
-        else:
-            self.cursor.execute(q)
-        self.conn.commit() #apply changes
-        return self.cursor
-    
-    def __del__(self):
-        self.conn.close() #close database connection
 
 class faceCamera:
     def _putText(self,text,frame,position,scale=1,thickness=1,color=(0,0,255)): #frame is passed as reference
@@ -136,11 +114,11 @@ class Gui:
         f2.pack(side=c.TOP,fill=c.BOTH,expand=1)
         
         Label(f2,text="Username:",anchor=c.E).grid(row=0,column=0,padx=5,pady=5)
-        self.username = Entry(f2,validate='key',validatecommand=self._validateUser)
+        self.username = Entry(f2,validate='focus',validatecommand=self._validateUser)
         self.username.grid(row=0,column=1,padx=5,pady=5)
         
         Label(f2,text="Password:",anchor=c.E).grid(row=1,column=0,padx=5,pady=5)
-        self.password = Entry(f2,validate='key',validatecommand=self._validatePwd)
+        self.password = Entry(f2,validate='focus',validatecommand=self._validatePwd)
         self.password.grid(row=1,column=1,padx=5,pady=5)
         Label(f2,text="Set length:",font="-size 9", anchor=c.E).grid(row=1,column=2,padx=2,pady=5,sticky=c.E)
         self.pwdLength = Entry(f2,width=3)
@@ -215,15 +193,10 @@ class Gui:
     def _validatePwd(self):
         p = self.password.get()
         
-        if(len(p)<8):
-            self.password.config(bg='#FF5555') #red background
-            self.msg.set("Password must contain at least 8 characters in the set [A-Za-z0-9!.@#$%^&'\"*()?\/[]].")
-            return True
-        
-        if not set(p) <= set(string.ascii_uppercase + string.ascii_lowercase + string.digits + '!.@#$%^&*()?\'"\/'):
+        if len(p)<8 or not set(p) <= set(string.ascii_uppercase + string.ascii_lowercase + string.digits + '!.@#$%^&*()?\'"\/'):
             self.password.config(bg='#FF5555')
             self.msg.set("Password must contain at least 8 characters in the set [A-Za-z0-9!.@#$%^&'\"*()?\/[]].")
-            return True   
+            return False   
         
         self.msg.set("")
         self.password.config(bg='#FFFFFF') #reset to white
@@ -232,19 +205,14 @@ class Gui:
     def _validateUser(self):
         u = self.username.get()
         
-        if(len(u)<6):
+        if len(u)<3 or not set(u) <= set(string.ascii_uppercase + string.ascii_lowercase + string.digits):
             self.username.config(bg='#FF5555')
-            self.msg.set("Username must contain at least 6 characters in the set [A-Za-z0-9].")
-            return True
+            self.msg.set("Username must contain at least 3 characters in the set [A-Za-z0-9].")
+            return False
         
-        if not set(u) <= set(string.ascii_uppercase + string.ascii_lowercase + string.digits):
-            self.username.config(bg='#FF5555')
-            self.msg.set("Username must contain at least 6 characters in the set [A-Za-z0-9].")
-            return True
-        
-        if self.db.query('SELECT name from users WHERE name COLLATE NOCASE = ? LIMIT 1 ', [u]).fetchone():
+        if self.db.query('SELECT name from users WHERE name COLLATE NOCASE = ? LIMIT 1 ', (u,)).fetchone():
             self.msg.set("Username already taken. Please choose another one.")
-            return True
+            return False
             
         self.msg.set("")
         self.username.config(bg='#FFFFFF')
@@ -336,6 +304,7 @@ class Gui:
         cam = faceCamera()
         photosNew = cam.shootPhoto(1,True) #do a photo in selfshoot mode
         newEncodings = face_recognition.face_encodings(photosNew[0])[0]
+        print(sys.getsizeof(newEncodings)) # gives 1120 bytes
         dist = min(face_recognition.face_distance(self.userFaceEncodings, newEncodings))
         self.msg.set("Best match is {:.2%}.".format(1-dist))
     
