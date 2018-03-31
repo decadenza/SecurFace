@@ -23,7 +23,7 @@ Copyright 2017 Pasquale Lafiosca
 import os,sys,time,threading,json,string,random
 from tkinter import Tk,Frame,Label,Entry,Message,Button,messagebox,Text,Menu,Scrollbar,filedialog,IntVar,font,PhotoImage,StringVar,Listbox
 from tkinter import constants as c
-import sqlite3 as sql #database
+
 import face_recognition #main library
 import cv2 #opencv2
 import pickle
@@ -32,34 +32,12 @@ import pdb #debug library
 #custom libraries
 from lib.cryptoAES import cryptoAES
 from lib.pwdManager import pwdManager
+from database import Database
 
 #CONFIG
 CURPATH = os.path.dirname(os.path.realpath(__file__)) #current path
 DBPATH = os.path.join(CURPATH,"server","db","user.db")
 FACEPATH = os.path.join(CURPATH,"server","faces")
-
-class Database:
-    def __init__(self,p):
-        if not os.path.exists(os.path.dirname(p)): #if folder does not exists
-            os.makedirs(os.path.dirname(p)) #create it
-        self.conn = sql.connect(p) #open connection (creates file if does not exist)
-        self.cursor = self.conn.cursor()
-        self.cursor.execute("CREATE TABLE IF NOT EXISTS 'users' ( \
-            'id'    INTEGER PRIMARY KEY AUTOINCREMENT, \
-            'name'  TEXT UNIQUE, \
-            'pwd'   TEXT \
-            );")
-        
-    def query(self,q,args=None):
-        if args:
-            self.cursor.execute(q,args) #execute query and return result
-        else:
-            self.cursor.execute(q)
-        self.conn.commit() #apply changes
-        return self.cursor
-    
-    def __del__(self):
-        self.conn.close() #close database connection
 
 class faceCamera:
     def _putText(self,text,frame,position,scale=1,thickness=1,color=(0,0,255)): #frame is passed as reference
